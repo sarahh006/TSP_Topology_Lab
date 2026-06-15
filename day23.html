@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Genetic Algorithm Evolution Laboratory</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght=400;500;600;700&family=Inter:wght=400;500;600&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #020204; color: #e4e4e7; }
+        .heading-font { font-family: 'Space Grotesk', sans-serif; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="min-h-screen bg-[#020205] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-zinc-950 via-emerald-950/5 to-black">
+
+    <div class="max-w-7xl mx-auto px-4 py-6">
+        <!-- Dashboard Header -->
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 border-b border-zinc-800/80 pb-5">
+            <div>
+                <span class="text-xs font-bold uppercase tracking-widest text-emerald-400 font-mono"><i class="fa-solid fa-dna mr-1"></i> Neuroevolution & Evolutionary Algorithms</span>
+                <h1 class="text-3xl font-bold text-white heading-font mt-1 tracking-tight">AI Neuroevolution & <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-500">Genetic Algorithm Lab</span></h1>
+                <p class="text-sm text-zinc-400 mt-1">Witness natural selection in real-time as an autonomous population learns to navigate spatial obstacle topologies without explicit gradient descent.</p>
+            </div>
+            <div class="flex items-center gap-3 bg-zinc-900/80 border border-zinc-800 rounded-full px-4 py-2 backdrop-blur-sm">
+                <div class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" id="evoStatusDot"></div>
+                <span class="text-xs font-mono font-bold tracking-wider text-zinc-300" id="evoStatusText">EVOLUTION: RUNNING</span>
+            </div>
+        </header>
+
+        <!-- Algorithmic Metric Formula Widget -->
+        <div class="bg-zinc-900/30 border border-zinc-800/80 rounded-xl p-3 mb-6 font-mono text-xs flex flex-col lg:flex-row items-center justify-between gap-4">
+            <div class="text-zinc-400">
+                <i class="fa-solid fa-dna text-emerald-400 mr-1.5"></i> 
+                <strong>Chromosome Mutation Vector Operator:</strong> Adding random Gaussian noise based on current optimization hyperparameters:
+            </div>
+            <div class="text-teal-400 bg-black/40 px-4 py-1.5 rounded-lg border border-zinc-800/60 text-center">
+                $$W_{\text{mutated}} = W_{\text{old}} + \mathcal{N}(0, \sigma^2) \times \text{Mutation Rate}$$
+            </div>
+        </div>
+
+        <!-- Dashboard Layout Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- Left Control Panel & Hyperparameters -->
+            <div class="lg:col-span-1 flex flex-col gap-6">
+                <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-5 backdrop-blur-md">
+                    <h2 class="text-base font-semibold text-white heading-font mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-sliders text-emerald-400"></i> Evolutionary Parameters
+                    </h2>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex justify-between text-xs font-mono mb-1">
+                                <span class="text-zinc-400">Mutation Rate (Probability)</span>
+                                <span class="text-emerald-400 font-bold" id="mutationVal">10%</span>
+                            </div>
+                            <input type="range" id="sliderMutation" min="0.01" max="0.5" step="0.01" value="0.10" class="w-full accent-emerald-500 bg-zinc-950 h-1.5 rounded-lg appearance-none cursor-pointer" oninput="document.getElementById('mutationVal').innerText = Math.round(this.value * 100) + '%'">
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-xs font-mono mb-1">
+                                <span class="text-zinc-400">Simulation Warp Speed</span>
+                                <span class="text-emerald-400 font-bold" id="speedVal">1x</span>
+                            </div>
+                            <input type="range" id="sliderSpeed" min="1" max="5" step="1" value="1" class="w-full accent-emerald-500 bg-zinc-950 h-1.5 rounded-lg appearance-none cursor-pointer" oninput="document.getElementById('speedVal').innerText = this.value + 'x'">
+                        </div>
+
+                        <div class="pt-2 border-t border-zinc-800/60 flex gap-2">
+                            <button onclick="toggleSimulationEngine()" id="btnPauseToggle" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono py-2 rounded-xl transition font-bold">PAUSE EVOLUTION</button>
+                            <button onclick="resetEvolutionLab()" class="w-1/3 bg-zinc-950 hover:bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs font-mono py-2 rounded-xl transition">RESTART</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Generational Diagnostics Card -->
+                <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-5 backdrop-blur-md flex-1">
+                    <h2 class="text-base font-semibold text-white heading-font mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-chart-line text-teal-400"></i> Fitness Diagnostics
+                    </h2>
+                    
+                    <div class="grid grid-cols-2 gap-3 mb-4">
+                        <div class="bg-black/40 border border-zinc-800/60 rounded-xl p-3 text-center">
+                            <div class="text-[10px] uppercase font-mono text-zinc-500">Generation Cycle</div>
+                            <div class="text-xl font-bold font-mono text-white mt-1" id="lblGeneration">1</div>
+                        </div>
+                        <div class="bg-black/40 border border-zinc-800/60 rounded-xl p-3 text-center">
+                            <div class="text-[10px] uppercase font-mono text-zinc-500">Alive Count</div>
+                            <div class="text-xl font-bold font-mono text-emerald-400 mt-1" id="lblAlive">50 / 50</div>
+                        </div>
+                    </div>
+
+                    <div class="font-mono text-xs text-zinc-400 space-y-2 mb-4 pt-1">
+                        <div class="flex justify-between"><span>Current Score:</span><span id="lblCurrentScore" class="text-zinc-200 font-bold">0</span></div>
+                        <div class="flex justify-between"><span>All-Time High Score:</span><span id="lblHighScore" class="text-amber-400 font-bold">0</span></div>
+                    </div>
+
+                    <!-- SVG Fitness Curve Tracker -->
+                    <div class="border border-zinc-800/60 bg-black/50 rounded-xl p-2 h-24 relative flex items-end">
+                        <svg id="svgFitnessGraph" class="w-full h-full text-emerald-500/30" viewBox="0 0 100 100" preserveAspectRatio="none">
+                            <polyline fill="none" stroke="#10b981" stroke-width="1.5" points="" id="fitnessPolyline"/>
+                        </svg>
+                        <span class="absolute top-1.5 left-2 font-mono text-[9px] text-zinc-500">Peak Fitness Over Generations</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Simulation Canvas & Terminal Column -->
+            <div class="lg:col-span-2 flex flex-col gap-6">
+                <!-- Physical Laboratory Simulation Canvas Space -->
+                <div class="bg-zinc-900/20 border border-zinc-800/80 rounded-2xl p-4 backdrop-blur-md flex flex-col">
+                    <div class="flex justify-between items-center mb-2">
+                        <h2 class="text-base font-semibold text-white heading-font flex items-center gap-2"><i class="fa-solid fa-gamepad text-emerald-400"></i> Environmental Simulation Field</h2>
+                        <span class="text-[9px] font-mono text-zinc-500 uppercase bg-zinc-950 px-2 py-0.5 border border-zinc-800 rounded">Top Agent Features Active Vector Rays</span>
+                    </div>
+
+                    <div class="bg-black border border-zinc-800 rounded-xl overflow-hidden relative">
+                        <canvas id="gameCanvas" width="600" height="360" class="w-full h-auto block"></canvas>
+                    </div>
+                </div>
+
+                <!-- Streaming Log Console Window -->
+                <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-4 font-mono text-xs">
+                    <span class="text-zinc-500 uppercase block mb-1.5 font-bold tracking-wider">Evolutionary Engine Event Output:</span>
+                    <div id="evoTerminalConsole" class="h-16 overflow-y-auto space-y-1 text-zinc-400 no-scrollbar">
+                        <div>[SYSTEM INITIALIZATION] Populating generation 1 array matrices with 50 randomized structural synapse networks...</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Evolution Hyperparameters Configuration
+        const populationSize = 50;
+        let generationCount = 1;
+        let activeAgentsPopulation = [];
+        let archivedDeadAgents = [];
+        let obstaclesArray = [];
+        let simulationTimerTicks = 0;
+        let currentGameScore = 0;
+        let allTimeHighScore = 0;
+        let loopIsRunning = true;
+        let animationFrameId = null;
+        let historicalPeakFitnessArray = [];
+
+        // Obstacle Configurations
+        const obstacleWidth = 50;
+        const obstacleVerticalGapSize = 110;
+        const obstacleSpawnIntervalTicks = 110;
+
+        // Neural Network Definition Layer Helpers (Inputs: 3, Hidden: 4, Output: 1)
+        class DenseBrainNetwork {
+            constructor(clonedWeights = null) {
+                if (clonedWeights) {
+                    this.w1 = JSON.parse(JSON.stringify(clonedWeights.w1));
+                    this.w2 = [...clonedWeights.w2];
+                } else {
+                    // Randomize initial weight configurations
+                    this.w1 = Array.from({length: 3}, () => Array.from({length: 4}, () => (Math.random() * 2) - 1));
+                    this.w2 = Array.from({length: 4}, () => (Math.random() * 2) - 1);
+                }
+            }
+
+            mutate(rate) {
+                // Apply randomized Gaussian shifts to weight matrices
+                for(let i=0; i<3; i++) {
+                    for(let j=0; j<4; j++) {
+                        if(Math.random() < rate) this.w1[i][j] += (Math.random() * 2 - 1) * 0.4;
+                    }
+                }
+                for(let j=0; j<4; j++) {
+                    if(Math.random() < rate) this.w2[j] += (Math.random() * 2 - 1) * 0.4;
+                }
+            }
+
+            predict(inputs) {
+                // Layer 1 Matrix Feedforward calculation
+                let hiddenOutputs = [];
+                for(let j=0; j<4; j++) {
+                    let sum = 0;
+                    for(let i=0; i<3; i++) sum += inputs[i] * this.w1[i][j];
+                    hiddenOutputs.push(Math.tanh(sum)); // Tanh activation bounded between -1 and 1
+                }
+                // Output layer reduction
+                let finalSum = 0;
+                for(let j=0; j<4; j++) finalSum += hiddenOutputs[j] * this.w2[j];
+                return 1 / (1 + Math.exp(-finalSum)); // Sigmoid decision boundary threshold output
+            }
+        }
+
+        // Agent Physic Character Component Layer
+        class FlyingCreature {
+            constructor(brain = null) {
+                this.y = canvas.height / 2;
+                this.x = 70;
+                this.velocity = 0;
+                this.gravity = 0.45;
+                this.liftPower = -7.5;
+                this.isDead = false;
+                this.fitnessScore = 0;
+                this.scoreTicks = 0;
+                this.brain = brain || new DenseBrainNetwork();
+            }
+
+            updatePhysics(upcomingObstacle) {
+                this.scoreTicks++;
+                this.fitnessScore = this.scoreTicks;
+
+                this.velocity += this.gravity;
+                this.y += this.velocity;
+
+                // Handle ceiling/floor bounding collisions rules
+                if (this.y > canvas.height || this.y < 0) {
+                    this.isDead = true;
+                }
+
+                // Gather spatial vector fields to pipe into network inputs array
+                if (upcomingObstacle) {
+                    let inputVectorX = (upcomingObstacle.x - this.x) / canvas.width;
+                    let inputVectorTopY = (upcomingObstacle.gapTopY - this.y) / canvas.height;
+                    let inputVectorBottomY = ((upcomingObstacle.gapTopY + obstacleVerticalGapSize) - this.y) / canvas.height;
+
+                    let predictionOutput = this.brain.predict([inputVectorX, inputVectorTopY, inputVectorBottomY]);
+                    if (predictionOutput > 0.5) {
+                        this.velocity = this.liftPower; // Execute action flap trigger
+                    }
+                }
+            }
+
+            drawNode(isEliteRepresentative) {
+                ctx.fillStyle = isEliteRepresentative ? '#10b981' : 'rgba(16, 185, 129, 0.25)';
+                ctx.strokeStyle = isEliteRepresentative ? '#ffffff' : 'rgba(16, 185, 129, 0.15)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 6, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+            }
+        }
+
+        function pushConsoleEntry(msg) {
+            const consoleBox = document.getElementById('evoTerminalConsole');
+            consoleBox.innerHTML += `<div>[EVO LAYER] ➔ ${msg}</div>`;
+            consoleBox.scrollTop = consoleBox.scrollHeight;
+        }
+
+        function createInitialPopulation() {
+            activeAgentsPopulation = [];
+            for (let i = 0; i < populationSize; i++) {
+                activeAgentsPopulation.push(new FlyingCreature());
+            }
+        }
+
+        function spawnObstacleColumn() {
+            let bufferSpace = 50;
+            let randomGapTopY = bufferSpace + Math.random() * (canvas.height - obstacleVerticalGapSize - (bufferSpace * 2));
+            obstaclesArray.push({
+                x: canvas.width,
+                gapTopY: randomGapTopY,
+                passedByAgent: false
+            });
+        }
+
+        // Genetic Algorithm Breeding Loop: Crossover & Natural Selection Operators
+        function enactNextGenerationSequence() {
+            generationCount++;
+            document.getElementById('lblGeneration').innerText = generationCount;
+
+            // Calculate overall fitness performance thresholds
+            let peakEliteFitnessValue = 0;
+            let standardAlphaAgent = archivedDeadAgents[0];
+
+            archivedDeadAgents.forEach(agent => {
+                if (agent.fitnessScore > peakEliteFitnessValue) {
+                    peakEliteFitnessValue = agent.fitnessScore;
+                    standardAlphaAgent = agent;
+                }
+            });
+
+            historicalPeakFitnessArray.push(peakEliteFitnessValue);
+            if (historicalPeakFitnessArray.length > 50) historicalPeakFitnessArray.shift();
+            updateFitnessSVGChart();
+
+            pushConsoleEntry(`Gen ${generationCount - 1} completed. Best Score Ticks: ${peakEliteFitnessValue}. Preserving elite structural chromosomes...`);
+
+            // Initialize subsequent pool array tracking
+            let freshGenerationPool = [];
+            
+            // Preservation of Elite alpha configuration safely (Elimitism strategy)
+            freshGenerationPool.push(new FlyingCreature(new DenseBrainNetwork(standardAlphaAgent.brain)));
+
+            const currentMutationHyperparameter = parseFloat(document.getElementById('sliderMutation').value);
+
+            // Populate remainder generation pool with mutated offsets of top performers
+            while (freshGenerationPool.length < populationSize) {
+                let parentAgent = selectProportionalFitParent(archivedDeadAgents, peakEliteFitnessValue);
+                let childBrainNetwork = new DenseBrainNetwork(parentAgent.brain);
+                childBrainNetwork.mutate(currentMutationHyperparameter);
+                freshGenerationPool.push(new FlyingCreature(childBrainNetwork));
+            }
+
+            activeAgentsPopulation = freshGenerationPool;
+            archivedDeadAgents = [];
+            obstaclesArray = [];
+            simulationTimerTicks = 0;
+            currentGameScore = 0;
+            spawnObstacleColumn();
+        }
+
+        function selectProportionalFitParent(pool, maxFitness) {
+            // High probability selection weighting via stochastic acceptance rules
+            while(true) {
+                let pickedIndex = Math.floor(Math.random() * pool.length);
+                let testCandidate = pool[pickedIndex];
+                let acceptanceThreshold = Math.random() * maxFitness;
+                if (testCandidate.fitnessScore >= acceptanceThreshold) {
+                    return testCandidate;
+                }
+            }
+        }
+
+        function toggleSimulationEngine() {
+            if(loopIsRunning) {
+                loopIsRunning = false;
+                document.getElementById('btnPauseToggle').innerText = "RESUME EVOLUTION";
+                document.getElementById('btnPauseToggle').className = "w-full bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-mono py-2 rounded-xl transition font-bold";
+                document.getElementById('evoStatusDot').className = "w-2.5 h-2.5 rounded-full bg-cyan-500";
+                document.getElementById('evoStatusText').innerText = "EVOLUTION: PAUSED";
+                cancelAnimationFrame(animationFrameId);
+            } else {
+                loopIsRunning = true;
+                document.getElementById('btnPauseToggle').innerText = "PAUSE EVOLUTION";
+                document.getElementById('btnPauseToggle').className = "w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono py-2 rounded-xl transition font-bold";
+                document.getElementById('evoStatusDot').className = "w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse";
+                document.getElementById('evoStatusText').innerText = "EVOLUTION: RUNNING";
+                executeSimulationLoopFrame();
+            }
+        }
+
+        function resetEvolutionLab() {
+            generationCount = 1;
+            historicalPeakFitnessArray = [];
+            archivedDeadAgents = [];
+            obstaclesArray = [];
+            simulationTimerTicks = 0;
+            currentGameScore = 0;
+            allTimeHighScore = 0;
+            
+            document.getElementById('lblGeneration').innerText = "1";
+            document.getElementById('lblHighScore').innerText = "0";
+            document.getElementById('fitnessPolyline').setAttribute('points', '');
+            
+            createInitialPopulation();
+            spawnObstacleColumn();
+            pushConsoleEntry("Flushed genetic configurations. Evolution lifecycle restarted at index ground level.", "info");
+        }
+
+        // Core Physics Frame Calculations Engine Core Step
+        function executeSimulationLoopFrame() {
+            if (!loopIsRunning) return;
+
+            const operationalSpeedFactor = parseInt(document.getElementById('sliderSpeed').value);
+
+            // Warp calculations loops across accelerated timeline intervals
+            for(let loops=0; loops<operationalSpeedFactor; loops++) {
+                simulationTimerTicks++;
+
+                if (simulationTimerTicks % obstacleSpawnIntervalTicks === 0) {
+                    spawnObstacleColumn();
+                }
+
+                // Match nearest upcoming obstacle frame targets bounds
+                let primaryTargetObstacle = obstaclesArray.find(o => o.x + obstacleWidth > 50);
+
+                // Update physical vectors metrics across structural population elements
+                for (let i = activeAgentsPopulation.length - 1; i >= 0; i--) {
+                    let agent = activeAgentsPopulation[i];
+                    agent.updatePhysics(primaryTargetObstacle);
+
+                    // Obstacle Collision Box check pass
+                    if (primaryTargetObstacle) {
+                        if (agent.x + 6 > primaryTargetObstacle.x && agent.x - 6 < primaryTargetObstacle.x + obstacleWidth) {
+                            if (agent.y - 6 < primaryTargetObstacle.gapTopY || agent.y + 6 > primaryTargetObstacle.gapTopY + obstacleVerticalGapSize) {
+                                agent.isDead = true;
+                            }
+                        }
+                    }
+
+                    if (agent.isDead) {
+                        archivedDeadAgents.push(activeAgentsPopulation.splice(i, 1)[0]);
+                    }
+                }
+
+                // Process obstacles spatial translations arrays
+                obstaclesArray.forEach(obs => {
+                    obs.x -= 2.5; // Translate columns linearly leftward
+                    if (!obs.passedByAgent && obs.x + obstacleWidth < 70) {
+                        obs.passedByAgent = true;
+                        currentGameScore++;
+                        if (currentGameScore > allTimeHighScore) {
+                            allTimeHighScore = currentGameScore;
+                            document.getElementById('lblHighScore').innerText = allTimeHighScore;
+                        }
+                    }
+                });
+
+                // Clear out bounds obstacles array storage points
+                obstaclesArray = obstaclesArray.filter(o => o.x > -obstacleWidth);
+
+                // Check lifecycle population collapse state logic bounds
+                if (activeAgentsPopulation.length === 0) {
+                    enactNextGenerationSequence();
+                    break;
+                }
+            }
+
+            // Sync visual updates back down onto canvas contexts elements
+            document.getElementById('lblAlive').innerText = `${activeAgentsPopulation.length} / ${populationSize}`;
+            document.getElementById('lblCurrentScore').innerText = currentGameScore;
+
+            repaintPhysicsCanvas();
+            animationFrameId = requestAnimationFrame(executeSimulationLoopFrame);
+        }
+
+        function repaintPhysicsCanvas() {
+            // Draw field grid backdrop overlay canvas bounding layers
+            ctx.fillStyle = '#030306';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.strokeStyle = 'rgba(16, 185, 129, 0.03)'; ctx.lineWidth = 0.5;
+            for(let c=0; c<canvas.width; c+=25) {
+                ctx.beginPath(); ctx.moveTo(c, 0); ctx.lineTo(c, canvas.height); ctx.stroke();
+            }
+
+            // Draw current active obstacle blocks elements downstream
+            obstaclesArray.forEach(obs => {
+                ctx.fillStyle = 'rgba(245, 158, 11, 0.35)';
+                ctx.strokeStyle = '#f59e0b';
+                ctx.lineWidth = 1.5;
+                
+                // Top Column Section Box
+                ctx.fillRect(obs.x, 0, obstacleWidth, obs.gapTopY);
+                ctx.strokeRect(obs.x, 0, obstacleWidth, obs.gapTopY);
+
+                // Bottom Column Section Box
+                let bottomBoxY = obs.gapTopY + obstacleVerticalGapSize;
+                ctx.fillRect(obs.x, bottomBoxY, obstacleWidth, canvas.height - bottomBoxY);
+                ctx.strokeRect(obs.x, bottomBoxY, obstacleWidth, canvas.height - bottomBoxY);
+            });
+
+            // Draw living entities tracking arrays metrics maps
+            let alphaRepresentative = activeAgentsPopulation[0];
+            activeAgentsPopulation.forEach((agent, index) => {
+                agent.drawNode(index === 0);
+            });
+
+            // Draw elite prediction focus line segment paths indicators vectors
+            let primaryTargetObstacle = obstaclesArray.find(o => o.x + obstacleWidth > 50);
+            if (alphaRepresentative && primaryTargetObstacle) {
+                ctx.strokeStyle = 'rgba(34, 211, 238, 0.45)';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([4, 4]);
+                
+                ctx.beginPath();
+                ctx.moveTo(alphaRepresentative.x, alphaRepresentative.y);
+                ctx.lineTo(primaryTargetObstacle.x, primaryTargetObstacle.gapTopY);
+                ctx.moveTo(alphaRepresentative.x, alphaRepresentative.y);
+                ctx.lineTo(primaryTargetObstacle.x, primaryTargetObstacle.gapTopY + obstacleVerticalGapSize);
+                ctx.stroke();
+                
+                ctx.setLineDash([]); // Reset line dash format mapping
+            }
+        }
+
+        function updateFitnessSVGChart() {
+            if (historicalPeakFitnessArray.length < 2) return;
+            const poly = document.getElementById('fitnessPolyline');
+            let pointsString = "";
+            let maxVal = Math.max(...historicalPeakFitnessArray);
+            let minVal = Math.min(...historicalPeakFitnessArray);
+            let range = maxVal - minVal || 1;
+
+            historicalPeakFitnessArray.forEach((val, idx) => {
+                let lx = (idx / (historicalPeakFitnessArray.length - 1)) * 100;
+                let ly = 100 - (((val - minVal) / range) * 90 + 5);
+                pointsString += `${lx},${ly} `;
+            });
+            poly.setAttribute('points', pointsString);
+        }
+
+        // Initialize simulation execution context boundaries
+        createInitialPopulation();
+        spawnObstacleColumn();
+        executeSimulationLoopFrame();
+    </script>
+</body>
+</html>
