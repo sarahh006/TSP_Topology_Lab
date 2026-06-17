@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>K-Means Clustering & Vector Analysis Laboratory</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght=400;500;600;700&family=Inter:wght=400;500;600&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #020204; color: #e4e4e7; }
+        .heading-font { font-family: 'Space Grotesk', sans-serif; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="min-h-screen bg-[#020205] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-zinc-950 via-pink-950/5 to-black">
+
+    <div class="max-w-7xl mx-auto px-4 py-6">
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 border-b border-zinc-800/80 pb-5">
+            <div>
+                <span class="text-xs font-bold uppercase tracking-widest text-pink-500 font-mono"><i class="fa-solid fa-chart-pie mr-1"></i> Unsupervised Machine Learning Foundations</span>
+                <h1 class="text-3xl font-bold text-white heading-font mt-1 tracking-tight">K-Means Vector Mapping & <span class="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-rose-400">Spatial Partitioning Lab</span></h1>
+                <p class="text-sm text-zinc-400 mt-1">Deconstruct spatial coordinate clusters, calculate Euclidean cost indices, and observe Expectation-Maximization optimization live.</p>
+            </div>
+            <div class="flex items-center gap-3 bg-zinc-900/80 border border-zinc-800 rounded-full px-4 py-2 backdrop-blur-sm">
+                <div class="w-2.5 h-2.5 rounded-full bg-pink-500 animate-pulse" id="engineStatusDot"></div>
+                <span class="text-xs font-mono font-bold tracking-wider text-zinc-300" id="engineStatusText">ENGINE: READY</span>
+            </div>
+        </header>
+
+        <div class="bg-zinc-900/30 border border-zinc-800/80 rounded-xl p-3 mb-6 font-mono text-xs flex flex-col lg:flex-row items-center justify-between gap-4">
+            <div class="text-zinc-400">
+                <i class="fa-solid fa-calculator text-pink-400 mr-1.5"></i> 
+                <strong>Objective Cost Minimization (Within-Cluster Sum of Squares - WCSS):</strong>
+            </div>
+            <div class="text-pink-400 bg-black/40 px-4 py-1.5 rounded-lg border border-zinc-800/60 text-center">
+                $$J = \sum_{k=1}^{K} \sum_{i \in S_k} ||x_i - \mu_k||^2$$
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <div class="lg:col-span-1 flex flex-col gap-6">
+                <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-5 backdrop-blur-md">
+                    <h2 class="text-base font-semibold text-white heading-font mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-sliders text-pink-400"></i> Hyperparameters
+                    </h2>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex justify-between text-xs font-mono mb-1">
+                                <span class="text-zinc-400">Cluster Density Count (K)</span>
+                                <span class="text-pink-400 font-bold" id="kCountVal">3</span>
+                            </div>
+                            <input type="range" id="sliderK" min="2" max="6" step="1" value="3" class="w-full accent-pink-500 bg-zinc-950 h-1.5 rounded-lg appearance-none cursor-pointer" oninput="document.getElementById('kCountVal').innerText = this.value; resetCentroidsOnly();">
+                        </div>
+
+                        <div>
+                            <label class="text-xs font-mono text-zinc-400 uppercase block mb-1">Vector Distribution Preset</label>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button onclick="generateDataScatter('gaussian')" class="bg-zinc-950 border border-zinc-800 text-zinc-300 text-xs font-mono py-2 rounded-xl hover:border-zinc-700 transition">Gaussian Blobs</button>
+                                <button onclick="generateDataScatter('random')" class="bg-zinc-950 border border-zinc-800 text-zinc-300 text-xs font-mono py-2 rounded-xl hover:border-zinc-700 transition">Uniform Scatter</button>
+                            </div>
+                        </div>
+
+                        <div class="pt-2 border-t border-zinc-800/60 grid grid-cols-3 gap-2">
+                            <button onclick="stepKMeansEngine()" class="bg-pink-600 hover:bg-pink-500 text-white text-xs font-mono py-2.5 rounded-xl transition font-bold tracking-wider text-center">STEP</button>
+                            <button onclick="runToConvergence()" class="bg-zinc-950 hover:bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs font-mono py-2.5 rounded-xl transition font-bold text-center">AUTO</button>
+                            <button onclick="flushLabSpace()" class="bg-zinc-950 hover:bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs font-mono py-2.5 rounded-xl transition text-center">FLUSH</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-5 backdrop-blur-md flex-1">
+                    <h2 class="text-base font-semibold text-white heading-font mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-chart-line text-cyan-400"></i> Convergence Metrics
+                    </h2>
+                    
+                    <div class="grid grid-cols-2 gap-3 mb-4">
+                        <div class="bg-black/40 border border-zinc-800/60 rounded-xl p-3 text-center">
+                            <div class="text-[10px] uppercase font-mono text-zinc-500">Iterations Run</div>
+                            <div class="text-xl font-bold font-mono text-white mt-1" id="lblIterations">0</div>
+                        </div>
+                        <div class="bg-black/40 border border-zinc-800/60 rounded-xl p-3 text-center">
+                            <div class="text-[10px] uppercase font-mono text-zinc-500">WCSS Cost Metric</div>
+                            <div class="text-xl font-bold font-mono text-cyan-400 mt-1" id="lblCost">0</div>
+                        </div>
+                    </div>
+
+                    <div class="border border-zinc-800/60 bg-black/50 rounded-xl p-2 h-28 relative flex items-end">
+                        <svg id="svgCostGraph" class="w-full h-full text-cyan-500/30" viewBox="0 0 100 100" preserveAspectRatio="none">
+                            <polyline fill="none" stroke="#22d3ee" stroke-width="1.5" points="" id="costPolyline"/>
+                        </svg>
+                        <span class="absolute top-1.5 left-2 font-mono text-[9px] text-zinc-500">Variance Optimization History</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-2 flex flex-col gap-6">
+                <div class="bg-zinc-900/20 border border-zinc-800/80 rounded-2xl p-4 backdrop-blur-md flex flex-col">
+                    <div class="flex justify-between items-center mb-3">
+                        <h2 class="text-base font-semibold text-white heading-font flex items-center gap-2"><i class="fa-solid fa-circle-nodes text-pink-400"></i> Vector Spatial Plane</h2>
+                        <span class="text-[10px] font-mono text-zinc-500 tracking-wider uppercase bg-zinc-950 px-2.5 py-1 border border-zinc-800 rounded-md">Click canvas to drop data vectors</span>
+                    </div>
+
+                    <div class="bg-black border border-zinc-800 rounded-xl overflow-hidden relative">
+                        <canvas id="kmeansCanvas" width="600" height="380" class="w-full h-auto block cursor-crosshair"></canvas>
+                    </div>
+                </div>
+
+                <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-4 font-mono text-xs">
+                    <span class="text-zinc-500 uppercase block mb-1.5 font-bold tracking-wider">Expectation-Maximization Log Stream:</span>
+                    <div id="terminalLogConsole" class="h-16 overflow-y-auto space-y-1 text-zinc-400 no-scrollbar">
+                        <div>[SYSTEM INITIALIZED] Ready to partition multidimensional Euclidean coordinate streams...</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // DOM Handles
+        const canvas = document.getElementById('kmeansCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Color Palettes for the distinct clusters (K max = 6)
+        const clusterColors = [
+            { point: '#ec4899', line: 'rgba(236, 72, 153, 0.15)', centroid: '#f43f5e' }, // Pink/Rose
+            { point: '#06b6d4', line: 'rgba(6, 182, 212, 0.15)',  centroid: '#22d3ee' }, // Cyan
+            { point: '#10b981', line: 'rgba(16, 185, 129, 0.15)',  centroid: '#34d399' }, // Emerald
+            { point: '#a855f7', line: 'rgba(168, 85, 247, 0.15)',  centroid: '#c084fc' }, // Purple
+            { point: '#eab308', line: 'rgba(234, 179, 8, 0.15)',   centroid: '#facc15' }, // Gold
+            { point: '#3b82f6', line: 'rgba(59, 130, 246, 0.15)',  centroid: '#60a5fa' }  // Blue
+        ];
+
+        // Global State Arrays
+        let dataPointsArray = [];
+        let centroidsArray = [];
+        let runningIterationCount = 0;
+        let objectiveCostHistory = [];
+
+        function appendConsoleStream(msg, alertType = "info") {
+            const consoleBox = document.getElementById('terminalLogConsole');
+            const stamp = new Date().toLocaleTimeString();
+            let color = "text-zinc-500";
+            if (alertType === "success") color = "text-pink-400 font-medium";
+            if (alertType === "warning") color = "text-cyan-400 font-medium";
+            
+            consoleBox.innerHTML += `<div class="${color}">[${stamp}] ➔ ${msg}</div>`;
+            consoleBox.scrollTop = consoleBox.scrollHeight;
+        }
+
+        // Add coordinate maps points via user click actions
+        canvas.addEventListener('mousedown', function(e) {
+            const boundaryRect = canvas.getBoundingClientRect();
+            const scaleFactorX = canvas.width / boundaryRect.width;
+            const scaleFactorY = canvas.height / boundaryRect.height;
+            
+            const mouseCoordX = (e.clientX - boundaryRect.left) * scaleFactorX;
+            const mouseCoordY = (e.clientY - boundaryRect.top) * scaleFactorY;
+
+            dataPointsArray.push({ x: mouseCoordX, y: mouseCoordY, clusterIndex: -1 });
+            calculateWCSSCostIndex();
+            repaintTelemetryCanvas();
+        });
+
+        function resetCentroidsOnly() {
+            const targetKValue = parseInt(document.getElementById('sliderK').value);
+            centroidsArray = [];
+            runningIterationCount = 0;
+            objectiveCostHistory = [];
+            document.getElementById('lblIterations').innerText = "0";
+            document.getElementById('costPolyline').setAttribute('points', '');
+
+            // Initialize centroids at random existing point positions to use K-Means++ basic rule bounds
+            if (dataPointsArray.length >= targetKValue) {
+                let shuffledPoints = [...dataPointsArray].sort(() => Math.random() - 0.5);
+                for(let i=0; i<targetKValue; i++) {
+                    centroidsArray.push({ x: shuffledPoints[i].x, y: shuffledPoints[i].y });
+                }
+            } else {
+                // Default fallback if no coordinates exist yet
+                for(let i=0; i<targetKValue; i++) {
+                    centroidsArray.push({
+                        x: 50 + Math.random() * (canvas.width - 100),
+                        y: 50 + Math.random() * (canvas.height - 100)
+                    });
+                }
+            }
+            // Clear prior indices tags assignments
+            dataPointsArray.forEach(pt => pt.clusterIndex = -1);
+        }
+
+        function generateDataScatter(distributionMode) {
+            dataPointsArray = [];
+            objectiveCostHistory = [];
+
+            if (distributionMode === 'gaussian') {
+                // Generate 3 distinct dense Gaussian point clusters blobs maps configurations
+                const anchorPoints = [
+                    { cx: 150, cy: 150 },
+                    { cx: 450, cy: 120 },
+                    { cx: 300, cy: 280 }
+                ];
+                anchorPoints.forEach(center => {
+                    for(let i=0; i<30; i++) {
+                        let rad = Math.random() * Math.PI * 2;
+                        let dist = Math.pow(Math.random(), 1.5) * 45; // Gaussian distribution curve
+                        dataPointsArray.push({
+                            x: center.cx + Math.cos(rad) * dist,
+                            y: center.cy + Math.sin(rad) * dist,
+                            clusterIndex: -1
+                        });
+                    }
+                });
+                appendConsoleStream("Stochastically generated 90 clustered coordinates using high-density Gaussian distributions.", "success");
+            } else {
+                // Uniform randomized scatter coordinates allocation bounds
+                for(let i=0; i<80; i++) {
+                    dataPointsArray.push({
+                        x: 40 + Math.random() * (canvas.width - 80),
+                        y: 40 + Math.random() * (canvas.height - 80),
+                        clusterIndex: -1
+                    });
+                }
+                appendConsoleStream("Distributed 80 points uniformly across the Euclidean drawing field.", "success");
+            }
+
+            resetCentroidsOnly();
+            calculateWCSSCostIndex();
+            repaintTelemetryCanvas();
+        }
+
+        // Core Mathematical Processing Routine: Expectation-Maximization Steps
+        function stepKMeansEngine() {
+            if(centroidsArray.length === 0) resetCentroidsOnly();
+            
+            let structuralModificationsOccurred = false;
+
+            // 1. EXPECTATION PASS (Assignment Step): Map points to their nearest cluster index via Euclidean formulas
+            dataPointsArray.forEach(point => {
+                let minimumObservedDistance = Infinity;
+                let assignedClusterIndex = -1;
+
+                centroidsArray.forEach((centroid, index) => {
+                    let euclideanDistanceValue = Math.hypot(centroid.x - point.x, centroid.y - point.y);
+                    if (euclideanDistanceValue < minimumObservedDistance) {
+                        minimumObservedDistance = euclideanDistanceValue;
+                        assignedClusterIndex = index;
+                    }
+                });
+
+                if (point.clusterIndex !== assignedClusterIndex) {
+                    point.clusterIndex = assignedClusterIndex;
+                    structuralModificationsOccurred = true;
+                }
+            });
+
+            // 2. MAXIMIZATION PASS (Update Step): Recompute centroid mean coordinate anchors locations
+            const targetKValue = centroidsArray.length;
+            let clusterAccumulatorX = Array(targetKValue).fill(0);
+            let clusterAccumulatorY = Array(targetKValue).fill(0);
+            let clusterNodeCount = Array(targetKValue).fill(0);
+
+            dataPointsArray.forEach(point => {
+                if (point.clusterIndex !== -1) {
+                    clusterAccumulatorX[point.clusterIndex] += point.x;
+                    clusterAccumulatorY[point.clusterIndex] += point.y;
+                    clusterNodeCount[point.clusterIndex]++;
+                }
+            });
+
+            for (let k = 0; k < targetKValue; k++) {
+                if (clusterNodeCount[k] > 0) {
+                    let nextMeanX = clusterAccumulatorX[k] / clusterNodeCount[k];
+                    let nextMeanY = clusterAccumulatorY[k] / clusterNodeCount[k];
+
+                    if (Math.abs(centroidsArray[k].x - nextMeanX) > 0.1 || Math.abs(centroidsArray[k].y - nextMeanY) > 0.1) {
+                        centroidsArray[k].x = nextMeanX;
+                        centroidsArray[k].y = nextMeanY;
+                        structuralModificationsOccurred = true;
+                    }
+                }
+            }
+
+            runningIterationCount++;
+            document.getElementById('lblIterations').innerText = runningIterationCount;
+
+            calculateWCSSCostIndex();
+            repaintTelemetryCanvas();
+
+            if (structuralModificationsOccurred) {
+                appendConsoleStream(`Step ${runningIterationCount} completed. Centroid positions shifted toward local variance means.`);
+            } else {
+                appendConsoleStream(`Engine optimization cycle completed in ${runningIterationCount} iterations. Variance equilibrium achieved.`, "success");
+            }
+
+            return structuralModificationsOccurred; // Returns true if modifications are still happening
+        }
+
+        function runToConvergence() {
+            if (dataPointsArray.length === 0) return;
+            document.getElementById('engineStatusText').innerText = "ENGINE: RUNNING";
+            document.getElementById('engineStatusDot').className = "w-2.5 h-2.5 rounded-full bg-cyan-500 animate-pulse";
+
+            let loopSafetyCounter = 0;
+            let activelyOptimizing = true;
+
+            // Iteratively process optimization passes until cluster coordinates stop changing
+            while (activelyOptimizing && loopSafetyCounter < 100) {
+                activelyOptimizing = stepKMeansEngine();
+                loopSafetyCounter++;
+            }
+
+            document.getElementById('engineStatusText').innerText = "ENGINE: CONVERGED";
+            document.getElementById('engineStatusDot').className = "w-2.5 h-2.5 rounded-full bg-pink-500";
+        }
+
+        function calculateWCSSCostIndex() {
+            let varianceCostAccumulator = 0;
+            dataPointsArray.forEach(point => {
+                if (point.clusterIndex !== -1) {
+                    let centroid = centroidsArray[point.clusterIndex];
+                    varianceCostAccumulator += Math.pow(centroid.x - point.x, 2) + Math.pow(centroid.y - point.y, 2);
+                }
+            });
+
+            document.getElementById('lblCost').innerText = Math.round(varianceCostAccumulator).toLocaleString();
+            
+            if (varianceCostAccumulator > 0) {
+                objectiveCostHistory.push(varianceCostAccumulator);
+                if (objectiveCostHistory.length > 40) objectiveCostHistory.shift();
+                updateCostCurveSVGChart();
+            }
+        }
+
+        function repaintTelemetryCanvas() {
+            // Paint canvas backdrop landscape bounds line indicators shapes 
+            ctx.fillStyle = '#030306'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw thin reference grid frames coordinates networks
+            ctx.strokeStyle = 'rgba(244, 63, 94, 0.02)'; ctx.lineWidth = 0.5;
+            for(let c=0; c<canvas.width; c+=20) {
+                ctx.beginPath(); ctx.moveTo(c, 0); ctx.lineTo(c, canvas.height); ctx.stroke();
+            }
+
+            // 1. Draw connection link vector paths lines from data coordinates to assigned centroid averages
+            dataPointsArray.forEach(point => {
+                if (point.clusterIndex !== -1) {
+                    let centroid = centroidsArray[point.clusterIndex];
+                    let scheme = clusterColors[point.clusterIndex];
+                    ctx.strokeStyle = scheme.line;
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(point.x, point.y);
+                    ctx.lineTo(centroid.x, centroid.y);
+                    ctx.stroke();
+                }
+            });
+
+            // 2. Draw regular spatial data points coordinates markers dots
+            dataPointsArray.forEach(point => {
+                let color = point.clusterIndex !== -1 ? clusterColors[point.clusterIndex].point : '#a1a1aa';
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, 4.5, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // 3. Draw active optimization target cluster center shapes anchors
+            centroidsArray.forEach((centroid, index) => {
+                let scheme = clusterColors[index];
+                ctx.fillStyle = scheme.centroid;
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                
+                // Draw centroid as a high-visibility star or cross shape anchor block
+                ctx.beginPath();
+                ctx.arc(centroid.x, centroid.y, 8, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                // Small crosshairs overlay to emphasize anchor properties
+                ctx.strokeStyle = '#000000'; ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(centroid.x - 4, centroid.y); ctx.lineTo(centroid.x + 4, centroid.y);
+                ctx.moveTo(centroid.x, centroid.y - 4); ctx.lineTo(centroid.x, centroid.y + 4);
+                ctx.stroke();
+            });
+        }
+
+        function updateCostCurveSVGChart() {
+            if (objectiveCostHistory.length < 2) return;
+            const line = document.getElementById('costPolyline');
+            let pointsString = "";
+            let maxVal = Math.max(...objectiveCostHistory);
+            let minVal = Math.min(...objectiveCostHistory);
+            let range = maxVal - minVal || 1;
+
+            objectiveCostHistory.forEach((val, idx) => {
+                let lx = (idx / (objectiveCostHistory.length - 1)) * 100;
+                let ly = 100 - (((val - minVal) / range) * 90 + 5);
+                pointsString += `${lx},${ly} `;
+            });
+            line.setAttribute('points', pointsString);
+        }
+
+        function flushLabSpace() {
+            dataPointsArray = [];
+            centroidsArray = [];
+            runningIterationCount = 0;
+            objectiveCostHistory = [];
+            
+            document.getElementById('lblIterations').innerText = "0";
+            document.getElementById('lblCost').innerText = "0";
+            document.getElementById('costPolyline').setAttribute('points', '');
+            document.getElementById('engineStatusText').innerText = "ENGINE: IDLE";
+            document.getElementById('engineStatusDot').className = "w-2.5 h-2.5 rounded-full bg-pink-500";
+
+            repaintTelemetryCanvas();
+            appendConsoleStream("Cleared all drawing spaces, cost tracking histories, and coordinate metrics.");
+        }
+
+        // Bootstrap data simulation workspace allocations structures maps 
+        generateDataScatter('gaussian');
+    </script>
+</body>
+</html>
